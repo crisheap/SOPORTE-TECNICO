@@ -1,4 +1,18 @@
 /* =====================================================
+   CONFIGURACIÓN SUPABASE
+===================================================== */
+
+const SUPABASE_URL = "https://ssvrzckughaoogaacnlo.supabase.co";
+
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_MzqpzPr2VbWdi2zyWV2AuA_bVPxdVrT";
+
+
+const supabaseClient = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_PUBLISHABLE_KEY
+);
+
+/* =====================================================
    MENÚ MÓVIL
 ===================================================== */
 
@@ -317,35 +331,48 @@ setInterval(() => {
 
 
 /* =====================================================
-   FORMULARIO → WHATSAPP
+   FORMULARIO → SUPABASE + WHATSAPP
 ===================================================== */
 
 const contactForm =
     document.getElementById("contactForm");
 
 
-contactForm.addEventListener("submit", event => {
+contactForm.addEventListener("submit", async (event) => {
 
     event.preventDefault();
 
 
+    /* ==========================================
+       OBTENER DATOS DEL FORMULARIO
+    ========================================== */
+
     const nombre =
         document.getElementById("nombre").value.trim();
+
 
     const telefono =
         document.getElementById("telefono").value.trim();
 
+
     const servicio =
         document.getElementById("servicio").value;
+
 
     const mensaje =
         document.getElementById("mensaje").value.trim();
 
 
-    if (!nombre ||
+    /* ==========================================
+       VALIDACIÓN
+    ========================================== */
+
+    if (
+        !nombre ||
         !telefono ||
         !servicio ||
-        !mensaje) {
+        !mensaje
+    ) {
 
         alert(
             "Por favor completa todos los campos."
@@ -355,40 +382,146 @@ contactForm.addEventListener("submit", event => {
     }
 
 
-    const texto =
+    /* ==========================================
+       BOTÓN
+    ========================================== */
 
-        `Hola, soy ${nombre}.%0A%0A` +
-
-        `📱 Teléfono: ${telefono}%0A` +
-
-        `🔧 Servicio: ${servicio}%0A%0A` +
-
-        `💻 Problema:%0A${mensaje}`;
-
-
-    /*
-       IMPORTANTE:
-       Cambia este número por tu número real.
-
-       Formato:
-       57 + número
-
-       Ejemplo:
-       573001234567
-    */
-
-    const numeroWhatsApp =
-        "573123154810";
+    const submitButton =
+        contactForm.querySelector(
+            ".btn-submit"
+        );
 
 
-    const url =
-        `https://wa.me/${numeroWhatsApp}?text=${texto}`;
+    const textoOriginal =
+        submitButton.innerHTML;
 
 
-    window.open(url, "_blank");
+    submitButton.disabled = true;
+
+    submitButton.innerHTML = `
+        <i class="fa-solid fa-spinner fa-spin"></i>
+        Enviando...
+    `;
+
+
+    try {
+
+
+        /* ==========================================
+           GUARDAR EN SUPABASE
+        ========================================== */
+
+        const { data, error } =
+            await supabaseClient
+                .from("solicitudes")
+                .insert({
+
+                    nombre: nombre,
+
+                    telefono: telefono,
+
+                    servicio: servicio,
+
+                    mensaje: mensaje,
+
+                    estado: "pendiente"
+
+                });
+
+
+        /* ==========================================
+           COMPROBAR ERROR
+        ========================================== */
+
+        if (error) {
+
+            console.error(
+                "Error Supabase:",
+                error
+            );
+
+            throw error;
+
+        }
+
+
+        /* ==========================================
+           CREAR MENSAJE WHATSAPP
+        ========================================== */
+
+        const texto =
+
+            `Hola, soy ${nombre}.%0A%0A` +
+
+            `📱 Teléfono: ${telefono}%0A` +
+
+            `🔧 Servicio: ${servicio}%0A%0A` +
+
+            `💻 Problema:%0A${mensaje}`;
+
+
+        /*
+            CAMBIA ESTE NÚMERO
+            POR TU WHATSAPP REAL.
+        */
+
+        const numeroWhatsApp =
+            "573123154810";
+
+
+        const urlWhatsApp =
+            `https://wa.me/${numeroWhatsApp}?text=${texto}`;
+
+
+        /* ==========================================
+           LIMPIAR FORMULARIO
+        ========================================== */
+
+        contactForm.reset();
+
+
+        /* ==========================================
+           MENSAJE
+        ========================================== */
+
+        alert(
+            "¡Solicitud registrada correctamente!"
+        );
+
+
+        /* ==========================================
+           ABRIR WHATSAPP
+        ========================================== */
+
+        window.open(
+            urlWhatsApp,
+            "_blank"
+        );
+
+
+    } catch (error) {
+
+
+        console.error(error);
+
+
+        alert(
+            "No fue posible registrar la solicitud. " +
+            "Por favor intenta nuevamente."
+        );
+
+
+    } finally {
+
+
+        submitButton.disabled = false;
+
+        submitButton.innerHTML =
+            textoOriginal;
+
+    }
 
 });
-
 
 /* =====================================================
    MODO OSCURO
